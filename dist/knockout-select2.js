@@ -1,4 +1,4 @@
-/* jshint boss:true*/
+﻿/* jshint boss:true*/
 (function(factory) {
     if (typeof define === 'function' && define.amd) {
         define(['jquery', 'knockout', 'module'], factory);
@@ -29,11 +29,19 @@
     }
 
     function init(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var bindingValue = ko.unwrap(valueAccessor());
-        var allBindings = allBindingsAccessor();
+
+       
+        var bindingValue = ko.unwrap(valueAccessor());        
+        var allBindings = allBindingsAccessor();        
         var ignoreChange = false;
         var dataChangeHandler = null;
         var subscription = null;
+
+        var selected = [];
+        if (allBindings.selectedOptions != undefined && allBindings.selectedOptions() != undefined)
+            selected = allBindings.selectedOptions();
+        else if (allBindings.value != undefined && allBindings.value() != undefined)
+            selected = allBindings.value();
 
         $(element).on('select2:selecting select2:unselecting', function() {
             ignoreChange = true;
@@ -48,10 +56,11 @@
                 triggerChangeQuietly(element, this._target || this.target);
             });
         } else if (ko.isObservable(allBindings.selectedOptions)) {
+            
             subscription = allBindings.selectedOptions.subscribe(function(value) {
                 if (ignoreChange) return;
-                triggerChangeQuietly(element, this._target || this.target);
-            });
+                triggerChangeQuietly(element, this._target || this.target);               
+            });            
         }
 
         // Provide a hook for binding to the select2 "data" property; this property is read-only in select2 so not subscribing.
@@ -66,6 +75,21 @@
         // Apply select2
         $(element).select2(bindingValue);
 
+        //set default values to select2
+        if (selected != null && selected.length > 0)
+        {
+            var obj = [];
+            for (var i = 0; i < selected.length; i++) {
+                obj.push(selected[i]);
+            }
+
+            //set to value to obserevable
+            var key = getPropertyName(element);
+            if (key != undefined)
+                viewModel[key](obj);
+        }
+
+        
         // Destroy select2 on element disposal
         ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
             $(element).select2('destroy');
@@ -78,6 +102,14 @@
         });
     }
 
+    //Get selectedOption binder name to set default options to viewmodel, that way we are able to set select2 default value.
+    function getPropertyName(element)
+    {
+        var dataBind = element.attributes['data-bind'].nodeValue;
+        var propertyName = dataBind.match(/selectedOptions\s*:\s*(?:{.*,?\s*data\s*:\s*)?([^{},\s]+)/);
+        return (propertyName && propertyName.length) ? propertyName[1] : undefined;
+    }
+    
     return ko.bindingHandlers[bindingName] = {
         init: function() {
             // Delay to allow other binding handlers to run, as this binding handler depends on options bindings
@@ -87,4 +119,8 @@
             }, 0);
         }
     };
+
+  
+
+
 });
