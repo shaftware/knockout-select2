@@ -28,6 +28,14 @@
         }
     }
 
+    function addSelectedOption(data, element) {
+        var $option = $("<option selected></option>")
+            .val(data.id)
+            .text(data.text);
+
+        $(element).append($option);
+    }
+
     function init(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var bindingValue = ko.unwrap(valueAccessor());
         var allBindings = allBindingsAccessor();
@@ -54,17 +62,62 @@
             });
         }
 
-        // Provide a hook for binding to the select2 "data" property; this property is read-only in select2 so not subscribing.
+        // Provide a hook for binding to the select2 "data" property;
         if (ko.isWriteableObservable(allBindings[dataBindingName])) {
             dataChangeHandler = function() {
                 if (!$(element).data('select2')) return;
-                allBindings[dataBindingName]($(element).select2('data'));
+
+                // Just get id and text properties
+                var data = $(element).select2('data').map(function (item) {
+                    return {
+                        id: (bindingValue.idIsString) ? item.id : parseInt(item.id, 10),
+                        text: item.text
+                    }
+                });
+
+                // Get the first item in array for single value selects
+                if (!bindingValue.multiple) {
+                    data = data[0];
+                }
+                allBindings[dataBindingName](data);
             };
             $(element).on('change', dataChangeHandler);
+
+            subscription = allBindings[dataBindingName].subscribe(function (value) {
+                if (ignoreChange) return;
+
+                // Clear value and remove selected text
+                if (!value) {
+                    $(element).val(null).trigger('change');
+                }
+                // Add multiple selections
+                else if (Array.isArray(value)) {
+                    value.forEach(function (item) {
+                        addSelectedOption(item, element)
+                    });
+                }
+                // Add single single selection
+                else {
+                    addSelectedOption(value, element)
+                }
+            });
         }
 
         // Apply select2
         $(element).select2(bindingValue);
+
+        // Initialize data
+        if (dataBindingName in allBindings) {
+            var data = ko.unwrap(allBindings[dataBindingName]);
+            if (Array.isArray(data)) {
+                data.forEach(function (item) {
+                    addSelectedOption(item, element)
+                });
+            }
+            else if (data) {
+                addSelectedOption(data, element)
+            }
+        }
 
         // Destroy select2 on element disposal
         ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
@@ -82,7 +135,7 @@
         init: function() {
             // Delay to allow other binding handlers to run, as this binding handler depends on options bindings
             var args = arguments;
-            setTimeout(function() {                
+            setTimeout(function() {
                 init.apply(null, args);
             }, 0);
         }
