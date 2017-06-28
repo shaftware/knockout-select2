@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
@@ -111,6 +111,32 @@
                 ko.applyBindings(model, $("#multiselect-view").get(0));
             });
     </script>
+
+    <div id="multiselectWithValueSet-view">
+      <h1>Multi-select with default value set</h1>
+      <select multiple="multiple" data-bind="selectedOptions: selectedOptions, optionsText: 'text', select2: spec"></select>    
+  
+    </div>
+    <script>
+          $(function () {
+            
+            var spec = {
+              data: [{ id: '0', text: 'Red' }, { id: '1', text: 'White' }, { id: '2', text: 'Blue' }]
+            };
+
+            var selectedOptions = ko.observableArray(['1','2']);
+
+            var model = {
+              spec: spec,
+              selectedOptions: selectedOptions
+            };
+
+            ko.applyBindings(model, $("#multiselectWithValueSet-view").get(0));
+          });
+    </script>
+
+
+
     <div id="tags-view">
         <h1>Tags</h1>
         <select multiple="multiple" data-bind="options: options, selectedOptions: selectedOptions, optionsText: optionsText, select2: spec"></select>
